@@ -32,6 +32,10 @@ import (
 	statspb "google.golang.org/grpc/grpc-wallet/grpc/examples/wallet/stats"
 	"google.golang.org/grpc/grpc-wallet/utility"
 	"google.golang.org/grpc/metadata"
+	"go.opencensus.io/plugin/ocgrpc"
+        "go.opencensus.io/stats/view"
+	"contrib.go.opencensus.io/exporter/stackdriver"
+	"go.opencensus.io/trace"
 
 	_ "google.golang.org/grpc/xds" // To enable xds support.
 )
@@ -123,7 +127,7 @@ func handleBalanceResponse(r *walletpb.BalanceResponse) {
 
 // balanceSubcommand handles the 'balance' subcommand.
 func balanceSubcommand() {
-	conn, err := grpc.Dial(args.walletServer, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(args.walletServer, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
 	if err != nil {
 		log.Fatalf("did not connect: %v.", err)
 	}
@@ -174,7 +178,7 @@ func balanceSubcommand() {
 
 // priceSubcommand handles the 'price' subcommand.
 func priceSubcommand() {
-	conn, err := grpc.Dial(args.statsServer, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(args.statsServer, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
 	if err != nil {
 		log.Fatalf("did not connect: %v.", err)
 	}
@@ -217,6 +221,25 @@ func priceSubcommand() {
 }
 
 func main() {
+        if err := view.Register(ocgrpc.DefaultClientViews...); err != nil {
+		log.Fatalf("Failed to register ocgrpc client views: %v", err)
+	}
+
+	// Create and register the exporter
+	sd, err := stackdriver.NewExporter(stackdriver.Options{
+//		ProjectID:    "census-demos", // Insert your projectID here
+//		MetricPrefix: "ocgrpctutorial",
+	})
+	if err != nil {
+		log.Fatalf("Failed to create Stackdriver exporter: %v", err)
+	}
+	defer sd.Flush()
+	trace.RegisterExporter(sd)
+	sd.StartMetricsExporter()
+	defer sd.StopMetricsExporter()
+	// For demo purposes let's always sample
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
 	parseArguments()
 
 	if args.subcommand == "balance" {

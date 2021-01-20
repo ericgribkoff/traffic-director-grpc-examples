@@ -129,6 +129,7 @@ public class AccountServer {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
+	  Observability.setup();
     final AccountServer server = new AccountServer();
     server.parseArgs(args);
     server.start();

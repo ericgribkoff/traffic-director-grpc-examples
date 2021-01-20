@@ -166,6 +166,7 @@ public class StatsServer {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
+	  Observability.setup();
     final StatsServer server = new StatsServer();
     server.parseArgs(args);
     server.start();

@@ -18,10 +18,25 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
 def grpcVersion = '1.31.1' // CURRENT_GRPC_VERSION
+def opencensusVersion = "0.28.0" // LATEST_OPENCENSUS_RELEASE_VERSION https://github.com/census-instrumentation/opencensus-java/issues/2069
 def protobufVersion = '3.12.0'
 def protocVersion = protobufVersion
 
 dependencies {
+compile "io.opencensus:opencensus-api:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-zpages:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-grpc-metrics:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-http-util:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-http-servlet:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-http-jetty-client:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-metrics-ocagent:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-stats-prometheus:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-trace-jaeger:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-trace-logging:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-trace-ocagent:${opencensusVersion}"
+    implementation "io.grpc:grpc-census:${grpcVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "io.grpc:grpc-services:${grpcVersion}"
@@ -29,6 +44,8 @@ dependencies {
 
     runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
     runtimeOnly "io.grpc:grpc-xds:${grpcVersion}"
+
+    runtime "io.opencensus:opencensus-impl:${opencensusVersion}"
 
     testImplementation "io.grpc:grpc-testing:${grpcVersion}"
     testImplementation "junit:junit:4.12"

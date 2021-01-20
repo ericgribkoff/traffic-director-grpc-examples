@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import io.opencensus.trace.Tracing;
 
 /** A client for the gRPC Wallet example. */
 public class Client {
@@ -209,9 +210,12 @@ public class Client {
   }
 
   public static void main(String[] args) throws Exception {
+Observability.setup();
     Client client = new Client();
     client.parseArgs(args);
     client.run();
+    Tracing.getExportComponent().shutdown();
+    //Thread.sleep(10000); // without this, client seems to exit before sending trace to SD
   }
 
   private static class HeaderClientInterceptor implements ClientInterceptor {

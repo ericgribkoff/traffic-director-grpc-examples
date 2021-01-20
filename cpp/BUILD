@@ -1,4 +1,5 @@
 package(default_visibility = ["//visibility:public"])
+# googleapis
 
 cc_binary(
     name = "client",
@@ -8,7 +9,13 @@ cc_binary(
         "//:stats_proto",
         "//:wallet_proto",
         "@com_github_grpc_grpc//:grpc++",
-
+	"@com_github_grpc_grpc//:grpc_opencensus_plugin",
+	"@io_opencensus_cpp//opencensus/trace:trace",
+        "@io_opencensus_cpp//opencensus/stats:stats",
+        "@io_opencensus_cpp//opencensus/exporters/trace/stackdriver:stackdriver_exporter",
+	"@io_opencensus_cpp//opencensus/exporters/stats/stackdriver:stackdriver_exporter",
+	"@io_opencensus_cpp//opencensus/exporters/trace/stdout:stdout_exporter",
+	"@io_opencensus_cpp//opencensus/exporters/stats/stdout:stdout_exporter",
     ],
 )
 

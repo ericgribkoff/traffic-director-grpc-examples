@@ -23,8 +23,27 @@
 
 #include <grpc++/grpc++.h>
 
+#include <grpcpp/opencensus.h>
+
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
 #include "proto/grpc/examples/wallet/wallet.grpc.pb.h"
+
+
+#include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
+#include "opencensus/exporters/stats/stdout/stdout_exporter.h"
+#include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
+#include "opencensus/exporters/trace/stdout/stdout_exporter.h"
+//#include "opencensus/stats/aggregation.h"
+//#include "opencensus/stats/bucket_boundaries.h"
+//#include "opencensus/stats/view_descriptor.h"
+//#include "opencensus/tags/context_util.h"
+//#include "opencensus/tags/tag_key.h"
+//#include "opencensus/tags/tag_map.h"
+//#include "opencensus/tags/with_tag_map.h"
+//#include "opencensus/trace/context_util.h"
+//#include "opencensus/trace/sampler.h"
+//#include "opencensus/trace/trace_config.h"
+//#include "opencensus/trace/with_span.h"
 
 using grpc::Channel;
 using grpc::ChannelArguments;
@@ -204,10 +223,54 @@ class StatsClient {
   std::unique_ptr<Stats::Stub> stub_;
 };
 
+//opencensus::tags::TagKey MyKey() {
+//	  static const auto key = opencensus::tags::TagKey::Register("my_key");
+//	    return key;
+//}
+//
+//opencensus::stats::Aggregation MillisDistributionAggregation() {
+//	  return opencensus::stats::Aggregation::Distribution(
+//			        opencensus::stats::BucketBoundaries::Explicit(
+//					          {0, 0.1, 1, 10, 100, 1000}));
+//}
+//
+//ABSL_CONST_INIT const absl::string_view kRpcClientRoundtripLatencyMeasureName =
+//    "grpc.io/client/roundtrip_latency";
+//
+//    ::opencensus::tags::TagKey ClientMethodTagKey() {
+//	      static const auto method_tag_key =
+//		            ::opencensus::tags::TagKey::Register("grpc_client_method");
+//	        return method_tag_key;
+//    }
+//
+//::opencensus::tags::TagKey ClientStatusTagKey() {
+//	  static const auto status_tag_key =
+//		        ::opencensus::tags::TagKey::Register("grpc_client_status");
+//	    return status_tag_key;
+//}
+
 int main(int argc, char** argv) {
+	grpc::RegisterOpenCensusPlugin();
+	grpc::RegisterOpenCensusViewsForExport();
+	  opencensus::exporters::stats::StdoutExporter::Register();
+	    opencensus::exporters::trace::StdoutExporter::Register();
+
+	    opencensus::trace::TraceConfig::SetCurrentTraceParams(
+			    {128, 128, 128, 128, opencensus::trace::ProbabilitySampler(1.0)});
+
+
+	        opencensus::exporters::trace::StackdriverOptions trace_opts;
+		    trace_opts.project_id = "ericgribkoff-grpcz";
+		        opencensus::exporters::trace::StackdriverExporter::Register(
+					        std::move(trace_opts));
+    opencensus::exporters::stats::StackdriverOptions stats_opts;
+    stats_opts.project_id = "ericgribkoff-grpcz";
+    opencensus::exporters::stats::StackdriverExporter::Register(
+        std::move(stats_opts));
+
   std::string command = "balance";
-  std::string wallet_server = "localhost:50051";
-  std::string stats_server = "localhost:50052";
+  std::string wallet_server = "localhost:18881";
+  std::string stats_server = "localhost:18882";
   std::string user = "Alice";
   bool watch = false;
   bool unary_watch = false;
