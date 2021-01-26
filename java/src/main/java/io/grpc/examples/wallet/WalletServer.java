@@ -114,7 +114,7 @@ public class WalletServer {
               + "Default \""
               + s.hostnameSuffix
               + "\""
-              + "\n  --stackdriver_project=STR Project name. If set, metrics and traces will be "
+              + "\n  --stackdriver_project=STR  Project name. If set, metrics and traces will be "
               + "sent to Stackdriver. Default \"" + s.stackdriverProject + "\""
               + "\n  --v1_behavior=true|false   If true, only aggregate balance is reported. "
               + "Default "
