@@ -64,15 +64,14 @@ public class Client {
     } else {
       target = walletServer;
     }
-    ManagedChannel managedChannel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-    ManagedChannelBuilder builder = ManagedChannelBuilder.forTarget(target).usePlaintext();
 
+    ManagedChannelBuilder builder = ManagedChannelBuilder.forTarget(target).usePlaintext();
     if (stackdriverProject != "") {
       Observability.registerExporters(stackdriverProject);
       builder = builder.intercept(Interceptors.getStatsClientInterceptor(),
           Interceptors.getTracingClientInterceptor());
     }
-
+    ManagedChannel managedChannel = builder.build();
     Metadata headers = new Metadata();
     if ("Alice".equals(user)) {
       headers.put(WalletInterceptors.TOKEN_MD_KEY, ALICE_TOKEN);
