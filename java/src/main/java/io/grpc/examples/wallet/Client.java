@@ -30,14 +30,15 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.StatusRuntimeException;
+import io.grpc.census.explicit.Interceptors;
 import io.grpc.examples.wallet.stats.PriceRequest;
 import io.grpc.examples.wallet.stats.PriceResponse;
 import io.grpc.examples.wallet.stats.StatsGrpc;
+import io.opencensus.trace.Tracing;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import io.opencensus.trace.Tracing;
 
 /** A client for the gRPC Wallet example. */
 public class Client {
@@ -50,6 +51,7 @@ public class Client {
   private String walletServer = "localhost:18881";
   private String statsServer = "localhost:18882";
   private String user = "Alice";
+  private String stackdriverProject = "";
   private boolean watch;
   private boolean unaryWatch;
 
@@ -63,6 +65,13 @@ public class Client {
       target = walletServer;
     }
     ManagedChannel managedChannel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+    ManagedChannelBuilder builder = ManagedChannelBuilder.forTarget(target).usePlaintext();
+
+    if (stackdriverProject != "") {
+      Observability.registerExporters(stackdriverProject);
+      builder = builder.intercept(Interceptors.getStatsClientInterceptor(),
+          Interceptors.getTracingClientInterceptor());
+    }
 
     Metadata headers = new Metadata();
     if ("Alice".equals(user)) {
@@ -113,6 +122,9 @@ public class Client {
       return;
     } finally {
       managedChannel.shutdownNow().awaitTermination(5, SECONDS);
+      // For demo purposes, if we are exporting traces, gracefully shutdown the transporter. This
+      // ensures that any queued trace exporters will be flushed to Cloud Tracing.
+      Tracing.getExportComponent().shutdown();
     }
   }
 
@@ -171,6 +183,8 @@ public class Client {
           usage = true;
           break;
         }
+      } else if ("stackdriver_project".equals(key)) {
+        stackdriverProject = value;
       } else if ("watch".equals(key)) {
         watch = Boolean.parseBoolean(value);
       } else if ("unary_watch".equals(key)) {
@@ -198,6 +212,8 @@ public class Client {
               + c.statsServer
               + "\n  --user=Alice|Bob          The user to call the RPCs. Default "
               + c.user
+              + "\n  --stackdriver_project=STR Project name. If set, metrics and traces will be "
+              + "sent to Stackdriver. Default \"" + c.stackdriverProject + "\""
               + "\n  --watch=true|false        Whether to call the streaming RPC. Default "
               + c.watch
               + "\n  --unary_watch=true|false  Watch for balance updates with unary RPC"
@@ -210,12 +226,9 @@ public class Client {
   }
 
   public static void main(String[] args) throws Exception {
-    Observability.setup();
     Client client = new Client();
     client.parseArgs(args);
     client.run();
-    Tracing.getExportComponent().shutdown();
-    //Thread.sleep(10000); // without this, client seems to exit before sending trace to SD
   }
 
   private static class HeaderClientInterceptor implements ClientInterceptor {

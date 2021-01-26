@@ -78,33 +78,28 @@ import io.opencensus.trace.export.SpanExporter;
 public final class Observability {
   private Observability() {}
 
-  static void setup() {
-	  try {
-// Register all the gRPC views and enable stats
-        RpcViews.registerAllGrpcViews();
+  static void registerExporters(String gcpProjectId) {
+    try {
+      // Register all the gRPC views and enable stats
+      RpcViews.registerAllGrpcViews();
 
-        // Create the Stackdriver stats exporter
-        StackdriverStatsExporter.createAndRegister(
-                StackdriverStatsConfiguration.builder()
-//                .setProjectId(gcpProjectId)
-                .setExportInterval(Duration.create(5, 0))
-                .build());
+      StackdriverStatsExporter.createAndRegister(
+          StackdriverStatsConfiguration.builder()
+              .setProjectId(gcpProjectId)
+              .setExportInterval(Duration.create(5, 0))
+              .build());
 
-        // For demo purposes, always sample
-        TraceConfig traceConfig = Tracing.getTraceConfig();
-        traceConfig.updateActiveTraceParams(
-                traceConfig.getActiveTraceParams()
-                    .toBuilder()
-                    .setSampler(Samplers.alwaysSample())
-                    .build());
+      // For demo purposes, always sample
+      TraceConfig traceConfig = Tracing.getTraceConfig();
+      traceConfig.updateActiveTraceParams(
+          traceConfig.getActiveTraceParams().toBuilder()
+              .setSampler(Samplers.alwaysSample())
+              .build());
 
-        // Create the Stackdriver trace exporter
-        StackdriverTraceExporter.createAndRegister(
-                StackdriverTraceConfiguration.builder()
-//               .setProjectId(gcpProjectId)
-                .build());
-	  } catch (Exception e) {
-		  throw new RuntimeException(e);
-	  }
+      StackdriverTraceExporter.createAndRegister(
+          StackdriverTraceConfiguration.builder().setProjectId(gcpProjectId).build());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

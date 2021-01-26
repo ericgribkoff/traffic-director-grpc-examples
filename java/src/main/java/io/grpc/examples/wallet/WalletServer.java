@@ -169,7 +169,7 @@ public class WalletServer {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-	  Observability.setup();
+	  // Observability.setup();
     final WalletServer server = new WalletServer();
     server.parseArgs(args);
     server.start();
