@@ -75,70 +75,13 @@ import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
 
 /** A client for the gRPC Wallet example. */
-public class Observability {
-  public static class CustomMetricsExporter extends MetricExporter {
-    private static final String EXAMPLE_STATS_EXPORTER = "ExampleStatsExporter";
-    private final IntervalMetricReader intervalMetricReader;
-
-    private CustomMetricsExporter() {
-      IntervalMetricReader.Options.Builder options = IntervalMetricReader.Options.builder();
-      MetricReader reader =
-              MetricReader.create(
-                      MetricReader.Options.builder()
-                              .setMetricProducerManager(Metrics.getExportComponent().getMetricProducerManager())
-                              .setSpanName(EXAMPLE_STATS_EXPORTER)
-                              .build());
-      intervalMetricReader = IntervalMetricReader.create(this, reader, options.setExportInterval(Duration.create(1, 0)).build());
-    }
-    /** Creates and registers the ExampleStatsExporter. */
-    public static CustomMetricsExporter createAndRegister() {
-      return new CustomMetricsExporter();
-    }
-
-    @Override
-    public void export(Collection<Metric> metrics) {
-      System.out.println("Exporting  metrics");
-      for (Metric metric : metrics) {
-        MetricDescriptor md = metric.getMetricDescriptor();
-        MetricDescriptor.Type type = md.getType();
-        System.out.println("Name: " + md.getName() + ", type: " + type);
-        List<LabelKey> keys = md.getLabelKeys();
-        StringBuilder keysSb = new StringBuilder("Keys: ");
-        for (LabelKey k : keys) {
-          keysSb.append(k.getKey() + " ");
-        }
-        System.out.println("Keys: " + keysSb);
-//        StringBuilder sb = new StringBuilder();
-//        sb.append("Seconds\tNanos\tValue\n");
-        List<TimeSeries> tss = metric.getTimeSeriesList();
-        for (TimeSeries ts : tss) {
-          Timestamp start = ts.getStartTimestamp();
-          System.out.println("Start " + start + "\n");
-          List<LabelValue> lvs = ts.getLabelValues();
-          StringBuilder lvSb = new StringBuilder("Keys: ");
-          for (LabelValue v : lvs) {
-            lvSb.append(v.getValue() + " ");
-          }
-          System.out.println("Label values: " + lvSb + "\n");
-        }
-//          for (Point p : ts.getPoints()) {
-//            Timestamp t = p.getTimestamp();
-//            long s = t.getSeconds();
-//            long nanos = t.getNanos();
-//            String line = s + "\t" + nanos + "\t" + p.getValue();
-//            sb.append(line);
-//          }
-//          System.out.println("Timeseries to export:\n" + sb);
-//        }
-      }
-    }
-  }
+public final class Observability {
+  private Observability() {}
 
   static void setup() {
 	  try {
 // Register all the gRPC views and enable stats
         RpcViews.registerAllGrpcViews();
-	CustomMetricsExporter.createAndRegister();
 
         // Create the Stackdriver stats exporter
         StackdriverStatsExporter.createAndRegister(

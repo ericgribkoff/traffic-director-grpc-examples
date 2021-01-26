@@ -24,19 +24,19 @@ def protocVersion = protobufVersion
 
 dependencies {
 compile "io.opencensus:opencensus-api:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-zpages:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-grpc-metrics:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-http-util:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-http-servlet:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-http-jetty-client:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-metrics-ocagent:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-stats-prometheus:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-trace-jaeger:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-trace-logging:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-trace-ocagent:${opencensusVersion}"
-    implementation "io.grpc:grpc-census:${grpcVersion}"
+        "io.opencensus:opencensus-contrib-zpages:${opencensusVersion}",
+        "io.opencensus:opencensus-contrib-grpc-metrics:${opencensusVersion}",
+        "io.opencensus:opencensus-contrib-http-util:${opencensusVersion}",
+        "io.opencensus:opencensus-contrib-http-servlet:${opencensusVersion}",
+        "io.opencensus:opencensus-contrib-http-jetty-client:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-metrics-ocagent:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-stats-prometheus:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-trace-jaeger:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-trace-logging:${opencensusVersion}",
+        "io.opencensus:opencensus-exporter-trace-ocagent:${opencensusVersion}"
+    implementation "io.grpc:grpc-census-explicit:${grpcVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "io.grpc:grpc-services:${grpcVersion}"
