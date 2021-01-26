@@ -27,6 +27,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.grpc.census.explicit.Interceptors;
 import io.grpc.examples.wallet.account.AccountGrpc;
 import io.grpc.examples.wallet.account.GetUserInfoRequest;
 import io.grpc.examples.wallet.account.GetUserInfoResponse;
@@ -54,6 +55,7 @@ public class WalletServer {
   private String accountServer = "localhost:18883";
   private String statsServer = "localhost:18882";
   private String hostnameSuffix = "";
+  private String stackdriverProject = "";
   private boolean v1Behavior;
 
   private ManagedChannel accountChannel;
@@ -87,6 +89,8 @@ public class WalletServer {
         statsServer = value;
       } else if ("hostname_suffix".equals(key)) {
         hostnameSuffix = value;
+      } else if ("stackdriver_project".equals(key)) {
+        stackdriverProject = value;
       } else if ("v1_behavior".equals(key)) {
         v1Behavior = Boolean.parseBoolean(value);
       } else {
@@ -110,6 +114,8 @@ public class WalletServer {
               + "Default \""
               + s.hostnameSuffix
               + "\""
+              + "\n  --stackdriver_project=STR Project name. If set, metrics and traces will be "
+              + "sent to Stackdriver. Default \"" + s.stackdriverProject + "\""
               + "\n  --v1_behavior=true|false   If true, only aggregate balance is reported. "
               + "Default "
               + s.v1Behavior);
@@ -118,12 +124,26 @@ public class WalletServer {
   }
 
   private void start() throws IOException {
-    accountChannel = ManagedChannelBuilder.forTarget(accountServer).usePlaintext().build();
-    statsChannel = ManagedChannelBuilder.forTarget(statsServer).usePlaintext().build();
+    ManagedChannelBuilder accountChannelBuilder = ManagedChannelBuilder.forTarget(accountServer).usePlaintext();
+    ManagedChannelBuilder statsChannelBuilder = ManagedChannelBuilder.forTarget(statsServer).usePlaintext();
+    ServerBuilder serverBuilder = ServerBuilder.forPort(port);
+    if (stackdriverProject != "") {
+      Observability.registerExporters(stackdriverProject);
+      accountChannelBuilder = accountChannelBuilder.intercept(
+          Interceptors.getStatsClientInterceptor(),
+          Interceptors.getTracingClientInterceptor());
+      statsChannelBuilder = statsChannelBuilder.intercept(
+          Interceptors.getStatsClientInterceptor(),
+          Interceptors.getTracingClientInterceptor());
+      serverBuilder
+          .intercept(Interceptors.getStatsServerInterceptor())
+          .intercept(Interceptors.getTracingServerInterceptor());
+    }
+    accountChannel = accountChannelBuilder.build();
+    statsChannel = statsChannelBuilder.build();
+
     HealthStatusManager health = new HealthStatusManager();
-    server =
-        ServerBuilder.forPort(port)
-            .addService(
+    server = serverBuilder.addService(
                 ServerInterceptors.intercept(
                     new WalletImpl(accountChannel, statsChannel, v1Behavior),
                     new WalletInterceptors.HostnameInterceptor(),
