@@ -30,12 +30,10 @@ import (
 	"google.golang.org/grpc"
 	walletpb "google.golang.org/grpc/grpc-wallet/grpc/examples/wallet"
 	statspb "google.golang.org/grpc/grpc-wallet/grpc/examples/wallet/stats"
+	"google.golang.org/grpc/grpc-wallet/observability"
 	"google.golang.org/grpc/grpc-wallet/utility"
 	"google.golang.org/grpc/metadata"
 	"go.opencensus.io/plugin/ocgrpc"
-        "go.opencensus.io/stats/view"
-	"contrib.go.opencensus.io/exporter/stackdriver"
-	"go.opencensus.io/trace"
 
 	_ "google.golang.org/grpc/xds" // To enable xds support.
 )
@@ -58,6 +56,7 @@ type arguments struct {
 	user         string
 	watch        bool
 	unaryWatch   bool
+  observabilityProject string
 }
 
 var args arguments
@@ -70,6 +69,7 @@ func parseArguments() {
 	flags.StringVar(&args.user, "user", "Alice", "the name of the user account, default 'Alice'")
 	flags.BoolVar(&args.watch, "watch", false, "if the balance/price should be watched rather than queried once, default false")
 	flags.BoolVar(&args.unaryWatch, "unary_watch", false, "if the balance/price should be watched but with repeated unary RPCs rather than a streaming rpc, default false")
+  flags.StringVar(&args.observabilityProject, "observability_project", "", "if set, metrics and traces will be sent to Cloud Monitoring and Cloud Trace")
 	flags.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), `
@@ -127,7 +127,11 @@ func handleBalanceResponse(r *walletpb.BalanceResponse) {
 
 // balanceSubcommand handles the 'balance' subcommand.
 func balanceSubcommand() {
-	conn, err := grpc.Dial(args.walletServer, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
+  var opts = []grpc.DialOption{grpc.WithInsecure(), grpc.WithBlock()}
+  if args.observabilityProject != ""{
+    opts = append(opts, grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
+  }
+	conn, err := grpc.Dial(args.walletServer, opts...)
 	if err != nil {
 		log.Fatalf("did not connect: %v.", err)
 	}
@@ -221,26 +225,11 @@ func priceSubcommand() {
 }
 
 func main() {
-        if err := view.Register(ocgrpc.DefaultClientViews...); err != nil {
-		log.Fatalf("Failed to register ocgrpc client views: %v", err)
-	}
-
-	// Create and register the exporter
-	sd, err := stackdriver.NewExporter(stackdriver.Options{
-//		ProjectID:    "census-demos", // Insert your projectID here
-//		MetricPrefix: "ocgrpctutorial",
-	})
-	if err != nil {
-		log.Fatalf("Failed to create Stackdriver exporter: %v", err)
-	}
-	defer sd.Flush()
-	trace.RegisterExporter(sd)
-	sd.StartMetricsExporter()
-	defer sd.StopMetricsExporter()
-	// For demo purposes let's always sample
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
-
 	parseArguments()
+  
+  if args.observabilityProject != "" {
+    observability.ConfigureStackdriver(args.observabilityProject)
+  }
 
 	if args.subcommand == "balance" {
 		balanceSubcommand()
