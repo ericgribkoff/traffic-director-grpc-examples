@@ -27,13 +27,13 @@ import (
 	"os"
 	"time"
 
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	walletpb "google.golang.org/grpc/grpc-wallet/grpc/examples/wallet"
 	statspb "google.golang.org/grpc/grpc-wallet/grpc/examples/wallet/stats"
 	"google.golang.org/grpc/grpc-wallet/observability"
 	"google.golang.org/grpc/grpc-wallet/utility"
 	"google.golang.org/grpc/metadata"
-	"go.opencensus.io/plugin/ocgrpc"
 
 	_ "google.golang.org/grpc/xds" // To enable xds support.
 )
@@ -50,13 +50,13 @@ var users = map[string]map[string]string{
 }
 
 type arguments struct {
-	subcommand   string
-	walletServer string
-	statsServer  string
-	user         string
-	watch        bool
-	unaryWatch   bool
-  observabilityProject string
+	subcommand           string
+	walletServer         string
+	statsServer          string
+	user                 string
+	watch                bool
+	unaryWatch           bool
+	observabilityProject string
 }
 
 var args arguments
@@ -69,7 +69,7 @@ func parseArguments() {
 	flags.StringVar(&args.user, "user", "Alice", "the name of the user account, default 'Alice'")
 	flags.BoolVar(&args.watch, "watch", false, "if the balance/price should be watched rather than queried once, default false")
 	flags.BoolVar(&args.unaryWatch, "unary_watch", false, "if the balance/price should be watched but with repeated unary RPCs rather than a streaming rpc, default false")
-  flags.StringVar(&args.observabilityProject, "observability_project", "", "if set, metrics and traces will be sent to Cloud Monitoring and Cloud Trace")
+	flags.StringVar(&args.observabilityProject, "observability_project", "", "if set, metrics and traces will be sent to Cloud Monitoring and Cloud Trace")
 	flags.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), `
@@ -127,10 +127,10 @@ func handleBalanceResponse(r *walletpb.BalanceResponse) {
 
 // balanceSubcommand handles the 'balance' subcommand.
 func balanceSubcommand() {
-  var opts = []grpc.DialOption{grpc.WithInsecure(), grpc.WithBlock()}
-  if args.observabilityProject != ""{
-    opts = append(opts, grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
-  }
+	var opts = []grpc.DialOption{grpc.WithInsecure(), grpc.WithBlock()}
+	if args.observabilityProject != "" {
+		opts = append(opts, grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
+	}
 	conn, err := grpc.Dial(args.walletServer, opts...)
 	if err != nil {
 		log.Fatalf("did not connect: %v.", err)
@@ -226,10 +226,10 @@ func priceSubcommand() {
 
 func main() {
 	parseArguments()
-  
-  if args.observabilityProject != "" {
-    observability.ConfigureStackdriver(args.observabilityProject)
-  }
+
+	if args.observabilityProject != "" {
+		observability.ConfigureStackdriver(args.observabilityProject)
+	}
 
 	if args.subcommand == "balance" {
 		balanceSubcommand()

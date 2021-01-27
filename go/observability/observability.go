@@ -1,21 +1,21 @@
 package observability
 
 import (
-  "log"
+	"log"
 
-"go.opencensus.io/plugin/ocgrpc"
-        "go.opencensus.io/stats/view"
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	"go.opencensus.io/plugin/ocgrpc"
+	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
 )
 
 func ConfigureStackdriver(gcpProject string) {
-  if err := view.Register(ocgrpc.DefaultClientViews...); err != nil {
+	if err := view.Register(ocgrpc.DefaultClientViews...); err != nil {
 		log.Fatalf("Failed to register ocgrpc client views: %v", err)
 	}
 
 	sd, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID:   gcpProject,
+		ProjectID: gcpProject,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create Stackdriver exporter: %v", err)
