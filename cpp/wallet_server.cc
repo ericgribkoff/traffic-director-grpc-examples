@@ -136,12 +136,15 @@ class WalletServiceImpl final : public Wallet::Service {
 
   Status FetchBalance(ServerContext* context, const BalanceRequest* request,
                       BalanceResponse* response) override {
-//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-//    std::cerr << "  Current context: "
-//              << opencensus::trace::GetCurrentSpan().context().ToString()
-//              << "\n";
-//    std::cerr << "  Current tags: "
-//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+    auto span2 = opencensus::trace::Span::StartSpan("internal_work", &span);
+    span.AddAttribute("my_attribute", "blue");
+    span.AddAnnotation("Performing work.");
+    std::cerr << "  Current context: "
+              << opencensus::trace::GetCurrentSpan().context().ToString()
+              << "\n";
+    std::cerr << "  Current tags: "
+              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
@@ -173,17 +176,18 @@ class WalletServiceImpl final : public Wallet::Service {
     int total_balance = ObtainAndBuildPerAddressResponse(stats_response.price(),
                                                          request, response);
     response->set_balance(total_balance);
+    span2.End();
     return Status::OK;
   }
 
   Status WatchBalance(ServerContext* context, const BalanceRequest* request,
                       ServerWriter<BalanceResponse>* writer) override {
-//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-//    std::cerr << "  Current context: "
-//              << opencensus::trace::GetCurrentSpan().context().ToString()
-//              << "\n";
-//    std::cerr << "  Current tags: "
-//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+    std::cerr << "  Current context: "
+              << opencensus::trace::GetCurrentSpan().context().ToString()
+              << "\n";
+    std::cerr << "  Current tags: "
+              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
