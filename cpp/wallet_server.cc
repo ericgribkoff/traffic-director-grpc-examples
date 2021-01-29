@@ -150,12 +150,13 @@ class WalletServiceImpl final : public Wallet::Service {
       PriceRequest stats_request;
       PriceResponse stats_response;
       // Call Stats Server to fetch the price to calculate the balance.
-      Status stats_status =
-          stats_stub_->FetchPrice(&stats_context, stats_request, &stats_response);
+      Status stats_status = stats_stub_->FetchPrice(
+          &stats_context, stats_request, &stats_response);
       if (stats_status.ok()) {
         auto metadata_hostname =
             stats_context.GetServerInitialMetadata().find("hostname");
-        if (metadata_hostname != stats_context.GetServerInitialMetadata().end()) {
+        if (metadata_hostname !=
+            stats_context.GetServerInitialMetadata().end()) {
           std::cout << "server host: "
                     << std::string(metadata_hostname->second.data(),
                                    metadata_hostname->second.length())
@@ -166,11 +167,11 @@ class WalletServiceImpl final : public Wallet::Service {
         std::cout << stats_status.error_code() << ": "
                   << stats_status.error_message() << std::endl;
       }
-      int total_balance = ObtainAndBuildPerAddressResponse(stats_response.price(),
-                                                           request, response);
+      int total_balance = ObtainAndBuildPerAddressResponse(
+          stats_response.price(), request, response);
       response->set_balance(total_balance);
       return Status::OK;
-     }
+    }
   }
 
   Status WatchBalance(ServerContext* context, const BalanceRequest* request,
