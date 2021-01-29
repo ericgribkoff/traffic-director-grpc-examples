@@ -122,12 +122,12 @@ class StatsServiceImpl final : public Stats::Service {
 
   Status FetchPrice(ServerContext* context, const PriceRequest* request,
                     PriceResponse* response) override {
-    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-        std::cerr << "  Current context: "
-                  << opencensus::trace::GetCurrentSpan().context().ToString()
-                  << "\n";
-        std::cerr << "  Current tags: "
-                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+//    std::cerr << "  Current context: "
+//              << opencensus::trace::GetCurrentSpan().context().ToString()
+//              << "\n";
+//    std::cerr << "  Current tags: "
+//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
@@ -139,12 +139,12 @@ class StatsServiceImpl final : public Stats::Service {
 
   Status WatchPrice(ServerContext* context, const PriceRequest* request,
                     ServerWriter<PriceResponse>* writer) override {
-    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-        std::cerr << "  Current context: "
-                  << opencensus::trace::GetCurrentSpan().context().ToString()
-                  << "\n";
-        std::cerr << "  Current tags: "
-                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+//    std::cerr << "  Current context: "
+//              << opencensus::trace::GetCurrentSpan().context().ToString()
+//              << "\n";
+//    std::cerr << "  Current tags: "
+//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authtication failed");

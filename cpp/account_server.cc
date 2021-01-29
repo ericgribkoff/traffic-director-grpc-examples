@@ -52,12 +52,12 @@ class AccountServiceImpl final : public Account::Service {
  private:
   Status GetUserInfo(ServerContext* context, const GetUserInfoRequest* request,
                      GetUserInfoResponse* response) override {
-    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-        std::cerr << "  Current context: "
-                  << opencensus::trace::GetCurrentSpan().context().ToString()
-                  << "\n";
-        std::cerr << "  Current tags: "
-                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+//    std::cerr << "  Current context: "
+//              << opencensus::trace::GetCurrentSpan().context().ToString()
+//              << "\n";
+//    std::cerr << "  Current tags: "
+//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     std::string token = request->token();
     context->AddInitialMetadata("hostname", hostname_);
     if (token == "2bd806c9") {
