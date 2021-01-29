@@ -28,12 +28,7 @@
 
 #include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
-#include "opencensus/tags/context_util.h"
-#include "opencensus/tags/tag_map.h"
 #include "opencensus/trace/with_span.h"
-#include "opencensus/trace/context_util.h"
-#include "opencensus/trace/span.h"
-#include "opencensus/trace/span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
 #include "proto/grpc/examples/wallet/wallet.grpc.pb.h"
@@ -140,19 +135,15 @@ class WalletServiceImpl final : public Wallet::Service {
                       BalanceResponse* response) override {
     opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
     {
+      // Run in OpenCensus span received from the client to correlate the traces
+      // in Cloud Monitoring.
       opencensus::trace::WithSpan ws(span);
-      std::cerr << "  Current context: "
-                << opencensus::trace::GetCurrentSpan().context().ToString()
-                << "\n";
-      std::cerr << "  Current tags: "
-                << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
       if (!ObtainAndValidateUserAndMembership(context)) {
         return Status(StatusCode::UNAUTHENTICATED,
                       "membership authentication failed");
       }
       context->AddInitialMetadata("hostname", hostname_);
       ClientContext stats_context;
-//      stats_context.set_census_context
       stats_context.set_wait_for_ready(true);
       stats_context.AddMetadata("authorization", token_);
       stats_context.AddMetadata("membership", membership_);
@@ -185,53 +176,52 @@ class WalletServiceImpl final : public Wallet::Service {
   Status WatchBalance(ServerContext* context, const BalanceRequest* request,
                       ServerWriter<BalanceResponse>* writer) override {
     opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-    std::cerr << "  Current context: "
-              << opencensus::trace::GetCurrentSpan().context().ToString()
-              << "\n";
-    std::cerr << "  Current tags: "
-              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
-    if (!ObtainAndValidateUserAndMembership(context)) {
-      return Status(StatusCode::UNAUTHENTICATED,
-                    "membership authentication failed");
-    }
-    context->AddInitialMetadata("hostname", hostname_);
-    ClientContext stats_context;
-//    stats_context.set_census_context(context->census_context());
-    stats_context.set_wait_for_ready(true);
-    stats_context.AddMetadata("authorization", token_);
-    stats_context.AddMetadata("membership", membership_);
-    PriceRequest stats_request;
-    PriceResponse stats_response;
-    // Open a streaming price watching with Stats Server.
-    // Every time a response
-    // is received, use the price to calculate the balance.
-    // Send every updated balance in a stream back to the client.
-    std::unique_ptr<ClientReader<PriceResponse>> stats_reader(
-        stats_stub_->WatchPrice(&stats_context, stats_request));
-    bool first_read = true;
-    while (stats_reader->Read(&stats_response)) {
-      if (first_read) {
-        auto metadata_hostname =
-            stats_context.GetServerInitialMetadata().find("hostname");
-        if (metadata_hostname !=
-            stats_context.GetServerInitialMetadata().end()) {
-          std::cout << "server host: "
-                    << std::string(metadata_hostname->second.data(),
-                                   metadata_hostname->second.length())
-                    << std::endl;
+    {
+      // Run in OpenCensus span received from the client to correlate the traces
+      // in Cloud Monitoring.
+      opencensus::trace::WithSpan ws(span);
+      if (!ObtainAndValidateUserAndMembership(context)) {
+        return Status(StatusCode::UNAUTHENTICATED,
+                      "membership authentication failed");
+      }
+      context->AddInitialMetadata("hostname", hostname_);
+      ClientContext stats_context;
+      stats_context.set_wait_for_ready(true);
+      stats_context.AddMetadata("authorization", token_);
+      stats_context.AddMetadata("membership", membership_);
+      PriceRequest stats_request;
+      PriceResponse stats_response;
+      // Open a streaming price watching with Stats Server.
+      // Every time a response
+      // is received, use the price to calculate the balance.
+      // Send every updated balance in a stream back to the client.
+      std::unique_ptr<ClientReader<PriceResponse>> stats_reader(
+          stats_stub_->WatchPrice(&stats_context, stats_request));
+      bool first_read = true;
+      while (stats_reader->Read(&stats_response)) {
+        if (first_read) {
+          auto metadata_hostname =
+              stats_context.GetServerInitialMetadata().find("hostname");
+          if (metadata_hostname !=
+              stats_context.GetServerInitialMetadata().end()) {
+            std::cout << "server host: "
+                      << std::string(metadata_hostname->second.data(),
+                                     metadata_hostname->second.length())
+                      << std::endl;
+          }
+          first_read = false;
         }
-        first_read = false;
+        std::cout << "grpc-coin price: " << stats_response.price() << std::endl;
+        BalanceResponse response;
+        int total_balance = ObtainAndBuildPerAddressResponse(
+            stats_response.price(), request, &response);
+        response.set_balance(total_balance);
+        if (!writer->Write(response)) {
+          break;
+        }
       }
-      std::cout << "grpc-coin price: " << stats_response.price() << std::endl;
-      BalanceResponse response;
-      int total_balance = ObtainAndBuildPerAddressResponse(
-          stats_response.price(), request, &response);
-      response.set_balance(total_balance);
-      if (!writer->Write(response)) {
-        break;
-      }
+      return Status::OK;
     }
-    return Status::OK;
   }
 
   std::string hostname_;

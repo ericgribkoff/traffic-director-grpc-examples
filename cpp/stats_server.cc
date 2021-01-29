@@ -31,10 +31,7 @@
 
 #include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
-#include "opencensus/tags/context_util.h"
-#include "opencensus/tags/tag_map.h"
-#include "opencensus/trace/context_util.h"
-#include "opencensus/trace/span.h"
+#include "opencensus/trace/with_span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
 
@@ -122,44 +119,44 @@ class StatsServiceImpl final : public Stats::Service {
 
   Status FetchPrice(ServerContext* context, const PriceRequest* request,
                     PriceResponse* response) override {
-//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-//    std::cerr << "  Current context: "
-//              << opencensus::trace::GetCurrentSpan().context().ToString()
-//              << "\n";
-//    std::cerr << "  Current tags: "
-//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
-    if (!ObtainAndValidateUserAndMembership(context)) {
-      return Status(StatusCode::UNAUTHENTICATED,
-                    "membership authentication failed");
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+    {
+      // Run in OpenCensus span received from the client to correlate the traces
+      // in Cloud Monitoring.
+      opencensus::trace::WithSpan ws(span);
+      if (!ObtainAndValidateUserAndMembership(context)) {
+        return Status(StatusCode::UNAUTHENTICATED,
+                      "membership authentication failed");
+      }
+      context->AddInitialMetadata("hostname", hostname_);
+      response->set_price(sin(time(0) * 1000 / 173) * 1000 + 10000);
+      return Status::OK;
     }
-    context->AddInitialMetadata("hostname", hostname_);
-    response->set_price(sin(time(0) * 1000 / 173) * 1000 + 10000);
-    return Status::OK;
   }
 
   Status WatchPrice(ServerContext* context, const PriceRequest* request,
                     ServerWriter<PriceResponse>* writer) override {
-//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-//    std::cerr << "  Current context: "
-//              << opencensus::trace::GetCurrentSpan().context().ToString()
-//              << "\n";
-//    std::cerr << "  Current tags: "
-//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
-    if (!ObtainAndValidateUserAndMembership(context)) {
-      return Status(StatusCode::UNAUTHENTICATED,
-                    "membership authtication failed");
-    }
-    context->AddInitialMetadata("hostname", hostname_);
-    while (true) {
-      PriceResponse response;
-      response.set_price(sin(time(0) * 1000 / 173) * 1000 + 10000);
-      if (!writer->Write(response)) {
-        break;
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+    {
+      // Run in OpenCensus span received from the client to correlate the traces
+      // in Cloud Monitoring.
+      opencensus::trace::WithSpan ws(span);
+      if (!ObtainAndValidateUserAndMembership(context)) {
+        return Status(StatusCode::UNAUTHENTICATED,
+                      "membership authtication failed");
       }
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(membership_ == "premium" ? 100 : 1000));
+      context->AddInitialMetadata("hostname", hostname_);
+      while (true) {
+        PriceResponse response;
+        response.set_price(sin(time(0) * 1000 / 173) * 1000 + 10000);
+        if (!writer->Write(response)) {
+          break;
+        }
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(membership_ == "premium" ? 100 : 1000));
+      }
+      return Status::OK;
     }
-    return Status::OK;
   }
 
   std::string hostname_;

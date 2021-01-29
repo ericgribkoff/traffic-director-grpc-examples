@@ -28,10 +28,7 @@
 
 #include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
-#include "opencensus/tags/context_util.h"
-#include "opencensus/tags/tag_map.h"
-#include "opencensus/trace/context_util.h"
-#include "opencensus/trace/span.h"
+#include "opencensus/trace/with_span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 
 using grpc::Server;
@@ -52,24 +49,24 @@ class AccountServiceImpl final : public Account::Service {
  private:
   Status GetUserInfo(ServerContext* context, const GetUserInfoRequest* request,
                      GetUserInfoResponse* response) override {
-//    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-//    std::cerr << "  Current context: "
-//              << opencensus::trace::GetCurrentSpan().context().ToString()
-//              << "\n";
-//    std::cerr << "  Current tags: "
-//              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
-    std::string token = request->token();
-    context->AddInitialMetadata("hostname", hostname_);
-    if (token == "2bd806c9") {
-      response->set_name("Alice");
-      response->set_membership(MembershipType::PREMIUM);
-    } else if (token == "81b637d8") {
-      response->set_name("Bob");
-      response->set_membership(MembershipType::NORMAL);
-    } else {
-      return Status(StatusCode::NOT_FOUND, "user not found");
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+    {
+      // Run in OpenCensus span received from the client to correlate the traces
+      // in Cloud Monitoring.
+      opencensus::trace::WithSpan ws(span);
+      std::string token = request->token();
+      context->AddInitialMetadata("hostname", hostname_);
+      if (token == "2bd806c9") {
+        response->set_name("Alice");
+        response->set_membership(MembershipType::PREMIUM);
+      } else if (token == "81b637d8") {
+        response->set_name("Bob");
+        response->set_membership(MembershipType::NORMAL);
+      } else {
+        return Status(StatusCode::NOT_FOUND, "user not found");
+      }
+      return Status::OK;
     }
-    return Status::OK;
   }
 
   std::string hostname_;
