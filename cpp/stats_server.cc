@@ -31,6 +31,10 @@
 
 #include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
+#include "opencensus/tags/context_util.h"
+#include "opencensus/tags/tag_map.h"
+#include "opencensus/trace/context_util.h"
+#include "opencensus/trace/span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
 
@@ -118,6 +122,12 @@ class StatsServiceImpl final : public Stats::Service {
 
   Status FetchPrice(ServerContext* context, const PriceRequest* request,
                     PriceResponse* response) override {
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+        std::cerr << "  Current context: "
+                  << opencensus::trace::GetCurrentSpan().context().ToString()
+                  << "\n";
+        std::cerr << "  Current tags: "
+                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
@@ -129,6 +139,12 @@ class StatsServiceImpl final : public Stats::Service {
 
   Status WatchPrice(ServerContext* context, const PriceRequest* request,
                     ServerWriter<PriceResponse>* writer) override {
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+        std::cerr << "  Current context: "
+                  << opencensus::trace::GetCurrentSpan().context().ToString()
+                  << "\n";
+        std::cerr << "  Current tags: "
+                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authtication failed");
@@ -189,8 +205,8 @@ void RunServer(const std::string& port, const std::string& account_server,
 }
 
 int main(int argc, char** argv) {
-  std::string port = "50052";
-  std::string account_server = "localhost:50053";
+  std::string port = "18882";
+  std::string account_server = "localhost:18883";
   std::string hostname_suffix = "";
   bool premium_only = false;
   std::string observability_project = "";

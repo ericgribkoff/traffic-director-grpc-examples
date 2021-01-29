@@ -28,6 +28,10 @@
 
 #include "opencensus/exporters/stats/stackdriver/stackdriver_exporter.h"
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
+#include "opencensus/tags/context_util.h"
+#include "opencensus/tags/tag_map.h"
+#include "opencensus/trace/context_util.h"
+#include "opencensus/trace/span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
 #include "proto/grpc/examples/wallet/wallet.grpc.pb.h"
@@ -132,6 +136,12 @@ class WalletServiceImpl final : public Wallet::Service {
 
   Status FetchBalance(ServerContext* context, const BalanceRequest* request,
                       BalanceResponse* response) override {
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+        std::cerr << "  Current context: "
+                  << opencensus::trace::GetCurrentSpan().context().ToString()
+                  << "\n";
+        std::cerr << "  Current tags: "
+                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
@@ -168,12 +178,19 @@ class WalletServiceImpl final : public Wallet::Service {
 
   Status WatchBalance(ServerContext* context, const BalanceRequest* request,
                       ServerWriter<BalanceResponse>* writer) override {
+    opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
+        std::cerr << "  Current context: "
+                  << opencensus::trace::GetCurrentSpan().context().ToString()
+                  << "\n";
+        std::cerr << "  Current tags: "
+                  << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
     if (!ObtainAndValidateUserAndMembership(context)) {
       return Status(StatusCode::UNAUTHENTICATED,
                     "membership authentication failed");
     }
     context->AddInitialMetadata("hostname", hostname_);
     ClientContext stats_context;
+//    stats_context.set_census_context(context->census_context());
     stats_context.set_wait_for_ready(true);
     stats_context.AddMetadata("authorization", token_);
     stats_context.AddMetadata("membership", membership_);
@@ -261,9 +278,9 @@ void RunServer(const std::string& port, const std::string& account_server,
 }
 
 int main(int argc, char** argv) {
-  std::string port = "50051";
-  std::string account_server = "localhost:50053";
-  std::string stats_server = "localhost:50052";
+  std::string port = "18881";
+  std::string account_server = "localhost:18882";
+  std::string stats_server = "localhost:18883";
   std::string hostname_suffix = "";
   bool v1_behavior = false;
   std::string observability_project = "";
