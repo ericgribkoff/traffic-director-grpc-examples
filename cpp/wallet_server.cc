@@ -30,7 +30,9 @@
 #include "opencensus/exporters/trace/stackdriver/stackdriver_exporter.h"
 #include "opencensus/tags/context_util.h"
 #include "opencensus/tags/tag_map.h"
+#include "opencensus/trace/with_span.h"
 #include "opencensus/trace/context_util.h"
+#include "opencensus/trace/span.h"
 #include "opencensus/trace/span.h"
 #include "proto/grpc/examples/wallet/account/account.grpc.pb.h"
 #include "proto/grpc/examples/wallet/stats/stats.grpc.pb.h"
@@ -137,47 +139,47 @@ class WalletServiceImpl final : public Wallet::Service {
   Status FetchBalance(ServerContext* context, const BalanceRequest* request,
                       BalanceResponse* response) override {
     opencensus::trace::Span span = grpc::GetSpanFromServerContext(context);
-    auto span2 = opencensus::trace::Span::StartSpan("internal_work", &span);
-    span.AddAttribute("my_attribute", "blue");
-    span.AddAnnotation("Performing work.");
-    std::cerr << "  Current context: "
-              << opencensus::trace::GetCurrentSpan().context().ToString()
-              << "\n";
-    std::cerr << "  Current tags: "
-              << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
-    if (!ObtainAndValidateUserAndMembership(context)) {
-      return Status(StatusCode::UNAUTHENTICATED,
-                    "membership authentication failed");
-    }
-    context->AddInitialMetadata("hostname", hostname_);
-    ClientContext stats_context;
-    stats_context.set_wait_for_ready(true);
-    stats_context.AddMetadata("authorization", token_);
-    stats_context.AddMetadata("membership", membership_);
-    PriceRequest stats_request;
-    PriceResponse stats_response;
-    // Call Stats Server to fetch the price to calculate the balance.
-    Status stats_status =
-        stats_stub_->FetchPrice(&stats_context, stats_request, &stats_response);
-    if (stats_status.ok()) {
-      auto metadata_hostname =
-          stats_context.GetServerInitialMetadata().find("hostname");
-      if (metadata_hostname != stats_context.GetServerInitialMetadata().end()) {
-        std::cout << "server host: "
-                  << std::string(metadata_hostname->second.data(),
-                                 metadata_hostname->second.length())
-                  << std::endl;
+    {
+      opencensus::trace::WithSpan ws(span);
+      std::cerr << "  Current context: "
+                << opencensus::trace::GetCurrentSpan().context().ToString()
+                << "\n";
+      std::cerr << "  Current tags: "
+                << opencensus::tags::GetCurrentTagMap().DebugString() << "\n";
+      if (!ObtainAndValidateUserAndMembership(context)) {
+        return Status(StatusCode::UNAUTHENTICATED,
+                      "membership authentication failed");
       }
-      std::cout << "grpc-coin price " << stats_response.price() << std::endl;
-    } else {
-      std::cout << stats_status.error_code() << ": "
-                << stats_status.error_message() << std::endl;
-    }
-    int total_balance = ObtainAndBuildPerAddressResponse(stats_response.price(),
-                                                         request, response);
-    response->set_balance(total_balance);
-    span2.End();
-    return Status::OK;
+      context->AddInitialMetadata("hostname", hostname_);
+      ClientContext stats_context;
+//      stats_context.set_census_context
+      stats_context.set_wait_for_ready(true);
+      stats_context.AddMetadata("authorization", token_);
+      stats_context.AddMetadata("membership", membership_);
+      PriceRequest stats_request;
+      PriceResponse stats_response;
+      // Call Stats Server to fetch the price to calculate the balance.
+      Status stats_status =
+          stats_stub_->FetchPrice(&stats_context, stats_request, &stats_response);
+      if (stats_status.ok()) {
+        auto metadata_hostname =
+            stats_context.GetServerInitialMetadata().find("hostname");
+        if (metadata_hostname != stats_context.GetServerInitialMetadata().end()) {
+          std::cout << "server host: "
+                    << std::string(metadata_hostname->second.data(),
+                                   metadata_hostname->second.length())
+                    << std::endl;
+        }
+        std::cout << "grpc-coin price " << stats_response.price() << std::endl;
+      } else {
+        std::cout << stats_status.error_code() << ": "
+                  << stats_status.error_message() << std::endl;
+      }
+      int total_balance = ObtainAndBuildPerAddressResponse(stats_response.price(),
+                                                           request, response);
+      response->set_balance(total_balance);
+      return Status::OK;
+     }
   }
 
   Status WatchBalance(ServerContext* context, const BalanceRequest* request,
